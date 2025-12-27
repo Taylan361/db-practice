@@ -34,6 +34,44 @@ app.get("/api/theses", async (req, res) => {
   }
 });
 
+// --- YENİ EKLENECEK KISIMLAR ---
+
+// 1. YENİ TEZ EKLEME (POST)
+app.post("/api/theses", async (req, res) => {
+  try {
+    // Frontend'den gelen verileri al
+    const { thesisNo, title, abstract, year, pageNum, typeId, instituteId, authorId, supervisorId, languageId } = req.body;
+
+    const query = `
+      INSERT INTO Theses (ThesisNo, Title, Abstract, Year, PageNum, TypeID, InstituteID, AuthorID, SupervisorID, LanguageID)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *;
+    `;
+
+    const values = [thesisNo, title, abstract, year, pageNum, typeId, instituteId, authorId, supervisorId, languageId];
+    
+    const newThesis = await pool.query(query, values);
+    res.json(newThesis.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Tez eklenirken hata oluştu: " + err.message);
+  }
+});
+
+// 2. TEZ SİLME (DELETE)
+app.delete("/api/theses/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Önce ilişkili tablolardan sil (CASCADE ayarlı ama garanti olsun)
+    // Sonra ana tablodan sil
+    await pool.query("DELETE FROM Theses WHERE ThesisNo = $1", [id]);
+    res.json("Tez başarıyla silindi!");
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Silme işlemi başarısız.");
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda çalışıyor...`);
 });
