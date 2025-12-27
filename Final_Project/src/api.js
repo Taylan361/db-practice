@@ -19,3 +19,5 @@ export const getPeople = () => api.get('/api/people');
 export const getInstitutes = () => api.get('/api/institutes');
 export const getLanguages = () => api.get('/api/languages');
 export const getTypes = () => api.get('/api/types');
+
+export const searchTheses = (params) => api.get('/api/search', { params });

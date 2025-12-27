@@ -3,6 +3,16 @@ import { getTheses, addThesis, deleteThesis, getPeople, getInstitutes, getLangua
 import { Container, Table, Button, Form, Row, Col, Alert, Spinner, Card, Modal, Badge } from "react-bootstrap";
 
 function App() {
+
+  // Arama Kriterleri State'i
+  const [searchParams, setSearchParams] = useState({
+    title: "",
+    authorId: "",
+    typeId: "",
+    instituteId: "",
+    year: ""
+  });
+
   const [theses, setTheses] = useState([]);
   
   // Dropdownlar için tutacağımız listeler
@@ -84,9 +94,88 @@ function App() {
     setShowModal(true);
   };
 
+  // Arama inputları değişince
+  const handleSearchChange = (e) => {
+    setSearchParams({ ...searchParams, [e.target.name]: e.target.value });
+  };
+
+  // Arama Butonuna Basınca
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // Backend'deki search rotasına istek at
+      const res = await searchTheses(searchParams);
+      setTheses(res.data); // Tabloyu gelen sonuçlarla güncelle
+      setLoading(false);
+    } catch (err) {
+      alert("Arama yapılamadı!");
+      setLoading(false);
+    }
+  };
+
+  // Filtreleri Temizle
+  const handleClearSearch = async () => {
+    setSearchParams({ title: "", authorId: "", typeId: "", instituteId: "", year: "" });
+    const res = await getTheses(); // Tüm listeyi geri getir
+    setTheses(res.data);
+  };
+
   return (
     <Container className="mt-5 mb-5">
       <h2 className="text-center mb-4 text-primary fw-bold">GTS - Lisansüstü Tez Sistemi</h2>
+      {/* --- DETAYLI ARAMA PANELİ --- */}
+      <Card className="mb-4 p-4 shadow-sm border-primary">
+        <h5 className="mb-3 text-primary">🔍 Detaylı Tez Arama</h5>
+        <Form onSubmit={handleSearchSubmit}>
+          <Row>
+            <Col md={4}>
+              <Form.Group className="mb-2">
+                <Form.Control 
+                  type="text" 
+                  name="title" 
+                  placeholder="Tez Başlığında Ara..." 
+                  value={searchParams.title}
+                  onChange={handleSearchChange} 
+                />
+              </Form.Group>
+            </Col>
+            
+            <Col md={3}>
+              <Form.Select name="authorId" value={searchParams.authorId} onChange={handleSearchChange}>
+                <option value="">Tüm Yazarlar</option>
+                {people.map(p => (
+                  <option key={p.personid} value={p.personid}>{p.firstname} {p.lastname}</option>
+                ))}
+              </Form.Select>
+            </Col>
+
+            <Col md={3}>
+              <Form.Select name="typeId" value={searchParams.typeId} onChange={handleSearchChange}>
+                <option value="">Tüm Türler</option>
+                {types.map(t => (
+                  <option key={t.typeid} value={t.typeid}>{t.typename}</option>
+                ))}
+              </Form.Select>
+            </Col>
+
+            <Col md={2}>
+              <Form.Control 
+                type="number" 
+                name="year" 
+                placeholder="Yıl" 
+                value={searchParams.year}
+                onChange={handleSearchChange} 
+              />
+            </Col>
+          </Row>
+          
+          <div className="d-flex justify-content-end mt-2 gap-2">
+            <Button variant="secondary" onClick={handleClearSearch}>Temizle</Button>
+            <Button variant="primary" type="submit">🔍 Ara</Button>
+          </div>
+        </Form>
+      </Card>
 
       {/* --- EKLEME FORMU --- */}
       <Card className="mb-4 p-4 shadow border-0 bg-light">
@@ -216,10 +305,10 @@ function App() {
                     <td>{thesis.year}</td>
                     <td>
                     <Button variant="info" size="sm" className="me-2 text-white" onClick={() => handleShowDetail(thesis)}>
-                        👁️ Detay
+                         Detay
                     </Button>
                     <Button variant="danger" size="sm" onClick={() => handleDelete(thesis.thesisno)}>
-                        🗑️ Sil
+                         Sil
                     </Button>
                     </td>
                 </tr>
