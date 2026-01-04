@@ -254,7 +254,7 @@ function App() {
                 <Row className="g-2 align-items-center justify-content-center py-3">
                   <Col md={8}>
                     <InputGroup size="lg">
-                      <InputGroup.Text className="bg-light border-end-0">🔍</InputGroup.Text>
+                      <InputGroup.Text className="bg-light border-end-0"></InputGroup.Text>
                       <Form.Control className="border-start-0 bg-light" type="text" name="title" placeholder="Search Thesis Title or Keyword..." value={searchParams.title} onChange={handleSearchChange} />
                     </InputGroup>
                   </Col>
