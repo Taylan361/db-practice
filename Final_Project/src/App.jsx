@@ -4,8 +4,6 @@ import {
 } from "react-bootstrap";
 
 // API fonksiyonlarını import ediyoruz.
-// EĞER api.js dosyasında bu fonksiyonlardan biri yoksa hata alırsın.
-// Hata almamak için api.js dosyanı kontrol et veya aşağıda hata yönetimi yapan yapıyı kullan.
 import { 
   getTheses, addThesis, deleteThesis, searchTheses, 
   getPeople, addPerson, updatePerson, deletePerson,
@@ -13,7 +11,9 @@ import {
   getLanguages, addLanguage, updateLanguage, deleteLanguage,
   getTypes, addType, updateType, deleteType,
   getTopics, addTopic, updateTopic, deleteTopic,
-  getKeywords, addKeyword, updateKeyword, deleteKeyword
+  getKeywords, addKeyword, updateKeyword, deleteKeyword,
+  // ARTIK BURASI AKTİF:
+  getUniversities, addUniversity, updateUniversity, deleteUniversity
 } from "./api";
 
 import "./App.css";
@@ -27,8 +27,6 @@ function App() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [showLogicPage, setShowLogicPage] = useState(false);
-  
-  // Loading State
   const [loading, setLoading] = useState(true);
 
   // Modal States
@@ -58,7 +56,7 @@ function App() {
     title: "", authorId: "", typeId: "", instituteId: "", year: ""
   });
 
-  // Data Lists (Başlangıçta boş array olarak tanımlı)
+  // Data Lists
   const [theses, setTheses] = useState([]);
   const [people, setPeople] = useState([]);
   const [institutes, setInstitutes] = useState([]);
@@ -66,15 +64,7 @@ function App() {
   const [types, setTypes] = useState([]);
   const [topics, setTopics] = useState([]);     
   const [keywords, setKeywords] = useState([]); 
-
-  // Mock Universities
-  const [universities, setUniversities] = useState([
-    { UniversityID: 1, UniversityName: 'Maltepe University' },
-    { UniversityID: 2, UniversityName: 'Marmara University' },
-    { UniversityID: 3, UniversityName: 'ITU' },
-    { UniversityID: 4, UniversityName: 'Bogazici University' },
-    { UniversityID: 5, UniversityName: 'Yildiz Technical University' }
-  ]);
+  const [universities, setUniversities] = useState([]); // ARTIK BOŞ BAŞLIYOR, API'DEN GELECEK
 
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [selectedThesis, setSelectedThesis] = useState(null);
@@ -101,14 +91,13 @@ function App() {
   };
 
   // ==========================================
-  // 3. DATA LOADING (DÜZELTİLEN KISIM)
+  // 3. DATA LOADING
   // ==========================================
 
-  // Bu yardımcı fonksiyon, api çağrısı hata verse bile uygulamayı çökertmez
   const fetchDataSafely = async (apiFunction, setStateFunction, dataName) => {
     try {
       if (typeof apiFunction !== 'function') {
-        console.warn(`${dataName} API fonksiyonu bulunamadı, atlanıyor.`);
+        console.warn(`${dataName} API fonksiyonu bulunamadı/import edilmedi.`);
         return;
       }
       const response = await apiFunction();
@@ -117,16 +106,12 @@ function App() {
       }
     } catch (error) {
       console.error(`HATA: ${dataName} yüklenemedi.`, error);
-      // Hata olsa bile state'i boş array yap ki sayfa patlamasın
       setStateFunction([]); 
     }
   };
 
   const loadAllData = async () => {
     setLoading(true);
-    
-    // Her birini ayrı ayrı güvenli şekilde çağıyoruz.
-    // Biri hata verse bile diğerleri yüklenir.
     await Promise.all([
       fetchDataSafely(getTheses, setTheses, "Theses"),
       fetchDataSafely(getPeople, setPeople, "People"),
@@ -134,16 +119,14 @@ function App() {
       fetchDataSafely(getLanguages, setLanguages, "Languages"),
       fetchDataSafely(getTypes, setTypes, "Types"),
       fetchDataSafely(getTopics, setTopics, "Topics"),
-      fetchDataSafely(getKeywords, setKeywords, "Keywords")
+      fetchDataSafely(getKeywords, setKeywords, "Keywords"),
+      // BURASI EKLENDİ: Üniversiteleri de API'den çekiyoruz
+      fetchDataSafely(getUniversities, setUniversities, "Universities") 
     ]);
-
     setLoading(false);
   };
 
-  // Sayfa açılışında verileri çek
-  useEffect(() => { 
-    loadAllData(); 
-  }, []);
+  useEffect(() => { loadAllData(); }, []);
 
   // ==========================================
   // 4. HANDLERS
@@ -205,163 +188,107 @@ function App() {
   // 5. DATA MANAGEMENT HANDLERS (CRUD)
   // ==========================================
 
-  // --- PEOPLE ---
-  const handleSavePerson = async () => {
-    try {
-      if (editingId) {
-        await updatePerson(editingId, newPerson);
-        showToast("✅ Person Updated!");
-      } else {
-        await addPerson(newPerson);
-        showToast("✅ Person Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getPeople, setPeople, "People");
-    } catch (err) { alert("Error: " + err.message); }
-  };
-  const handleEditPerson = (p) => {
-    setEditingId(p.personid);
-    setNewPerson({ firstName: p.firstname, lastName: p.lastname, title: p.title || "Student", email: p.email });
-  };
-  const handleDeletePerson = async (id) => {
-    if(!window.confirm("Delete this person?")) return;
-    try { await deletePerson(id); showToast("🗑️ Person Deleted"); await fetchDataSafely(getPeople, setPeople, "People"); } 
-    catch (err) { alert("Error: " + err.message); }
-  };
-
-  // --- INSTITUTES ---
-  const handleSaveInstitute = async () => {
-    try {
-      if (editingId) {
-        await updateInstitute(editingId, { InstituteName: newInstitute.name, UniversityID: newInstitute.universityId });
-        showToast("✅ Institute Updated!");
-      } else {
-        await addInstitute({ InstituteName: newInstitute.name, UniversityID: newInstitute.universityId });
-        showToast("✅ Institute Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getInstitutes, setInstitutes, "Institutes");
-    } catch (err) { alert("Error: " + err.message); }
-  };
-  const handleEditInstitute = (inst) => {
-    setEditingId(inst.instituteid);
-    setNewInstitute({ name: inst.institutename, universityId: inst.universityid });
-  };
-  const handleDeleteInstitute = async (id) => {
-    if(!window.confirm("Delete this institute?")) return;
-    try { await deleteInstitute(id); showToast("🗑️ Institute Deleted"); await fetchDataSafely(getInstitutes, setInstitutes, "Institutes"); }
-    catch (err) { alert("Error: " + err.message); }
-  };
-
-  // --- UNIVERSITIES (Mock) ---
+  // --- UNIVERSITIES (DÜZELTİLEN KISIM) ---
   const handleSaveUniversity = async () => {
-    if (editingId) {
-       const updated = universities.map(u => u.UniversityID === editingId ? {...u, UniversityName: newUniversity} : u);
-       setUniversities(updated);
-       showToast("✅ University Updated!");
-    } else {
-       const newId = universities.length > 0 ? Math.max(...universities.map(u => u.UniversityID)) + 1 : 1;
-       setUniversities([...universities, { UniversityID: newId, UniversityName: newUniversity }]);
-       showToast("✅ University Added!");
+    try {
+      if (editingId) {
+         // Veritabanında güncelle
+         await updateUniversity(editingId, { UniversityName: newUniversity });
+         showToast("✅ University Updated!");
+      } else {
+         // Veritabanına ekle
+         await addUniversity({ UniversityName: newUniversity });
+         showToast("✅ University Added!");
+      }
+      resetMgmtForms();
+      // Listeyi veritabanından tekrar çek
+      await fetchDataSafely(getUniversities, setUniversities, "Universities");
+    } catch (err) {
+      alert("Error: " + err.message);
     }
-    resetMgmtForms();
   };
   const handleEditUniversity = (u) => {
-    setEditingId(u.UniversityID);
-    setNewUniversity(u.UniversityName);
+    setEditingId(u.universityid); // API'den gelen veriye göre küçük harf olabilir, kontrol et
+    setNewUniversity(u.universityname);
   };
-  const handleDeleteUniversity = (id) => {
+  const handleDeleteUniversity = async (id) => {
     if(!window.confirm("Delete this university?")) return;
-    setUniversities(universities.filter(u => u.UniversityID !== id));
-    showToast("🗑️ University Deleted");
+    try {
+      await deleteUniversity(id);
+      showToast("🗑️ University Deleted");
+      await fetchDataSafely(getUniversities, setUniversities, "Universities");
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
   };
 
-  // --- LANGUAGES ---
+  // --- OTHER HANDLERS (AYNI KALIYOR) ---
+
+  // PEOPLE
+  const handleSavePerson = async () => {
+    try {
+      if (editingId) { await updatePerson(editingId, newPerson); showToast("✅ Person Updated!"); } 
+      else { await addPerson(newPerson); showToast("✅ Person Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getPeople, setPeople, "People");
+    } catch (err) { alert("Error: " + err.message); }
+  };
+  const handleEditPerson = (p) => { setEditingId(p.personid); setNewPerson({ firstName: p.firstname, lastName: p.lastname, title: p.title || "Student", email: p.email }); };
+  const handleDeletePerson = async (id) => { if(!window.confirm("Delete?")) return; try { await deletePerson(id); showToast("Deleted"); await fetchDataSafely(getPeople, setPeople, "People"); } catch (err) { alert(err.message); } };
+
+  // INSTITUTES
+  const handleSaveInstitute = async () => {
+    try {
+      if (editingId) { await updateInstitute(editingId, { InstituteName: newInstitute.name, UniversityID: newInstitute.universityId }); showToast("Updated!"); } 
+      else { await addInstitute({ InstituteName: newInstitute.name, UniversityID: newInstitute.universityId }); showToast("Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getInstitutes, setInstitutes, "Institutes");
+    } catch (err) { alert(err.message); }
+  };
+  const handleEditInstitute = (i) => { setEditingId(i.instituteid); setNewInstitute({ name: i.institutename, universityId: i.universityid }); };
+  const handleDeleteInstitute = async (id) => { if(!window.confirm("Delete?")) return; try { await deleteInstitute(id); showToast("Deleted"); await fetchDataSafely(getInstitutes, setInstitutes, "Institutes"); } catch (err) { alert(err.message); } };
+
+  // LANGUAGES
   const handleSaveLanguage = async () => {
     try {
-      if (editingId) {
-        await updateLanguage(editingId, { LanguageName: newLanguage });
-        showToast("✅ Language Updated!");
-      } else {
-        await addLanguage({ LanguageName: newLanguage });
-        showToast("✅ Language Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getLanguages, setLanguages, "Languages");
-    } catch (err) { alert("Error: " + err.message); }
+      if (editingId) { await updateLanguage(editingId, { LanguageName: newLanguage }); showToast("Updated!"); } 
+      else { await addLanguage({ LanguageName: newLanguage }); showToast("Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getLanguages, setLanguages, "Languages");
+    } catch (err) { alert(err.message); }
   };
-  const handleEditLanguage = (lang) => {
-    setEditingId(lang.languageid);
-    setNewLanguage(lang.languagename);
-  };
-  const handleDeleteLanguage = async (id) => {
-    if(!window.confirm("Delete this language?")) return;
-    try { await deleteLanguage(id); showToast("🗑️ Language Deleted"); await fetchDataSafely(getLanguages, setLanguages, "Languages"); }
-    catch (err) { alert("Error: " + err.message); }
-  };
+  const handleEditLanguage = (l) => { setEditingId(l.languageid); setNewLanguage(l.languagename); };
+  const handleDeleteLanguage = async (id) => { if(!window.confirm("Delete?")) return; try { await deleteLanguage(id); showToast("Deleted"); await fetchDataSafely(getLanguages, setLanguages, "Languages"); } catch (err) { alert(err.message); } };
 
-  // --- TYPES ---
+  // TYPES
   const handleSaveType = async () => {
     try {
-      if (editingId) {
-        await updateType(editingId, { TypeName: newType });
-        showToast("✅ Type Updated!");
-      } else {
-        await addType({ TypeName: newType });
-        showToast("✅ Type Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getTypes, setTypes, "Types");
-    } catch (err) { alert("Error: " + err.message); }
+      if (editingId) { await updateType(editingId, { TypeName: newType }); showToast("Updated!"); } 
+      else { await addType({ TypeName: newType }); showToast("Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getTypes, setTypes, "Types");
+    } catch (err) { alert(err.message); }
   };
   const handleEditType = (t) => { setEditingId(t.typeid); setNewType(t.typename); };
-  const handleDeleteType = async (id) => {
-    if(!window.confirm("Delete this type?")) return;
-    try { await deleteType(id); showToast("🗑️ Type Deleted"); await fetchDataSafely(getTypes, setTypes, "Types"); }
-    catch (err) { alert("Error: " + err.message); }
-  };
+  const handleDeleteType = async (id) => { if(!window.confirm("Delete?")) return; try { await deleteType(id); showToast("Deleted"); await fetchDataSafely(getTypes, setTypes, "Types"); } catch (err) { alert(err.message); } };
 
-  // --- TOPICS ---
+  // TOPICS
   const handleSaveTopic = async () => {
     try {
-      if (editingId) {
-        await updateTopic(editingId, { TopicName: newTopic });
-        showToast("✅ Topic Updated!");
-      } else {
-        await addTopic({ TopicName: newTopic });
-        showToast("✅ Topic Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getTopics, setTopics, "Topics");
-    } catch (err) { alert("Error: " + err.message); }
+      if (editingId) { await updateTopic(editingId, { TopicName: newTopic }); showToast("Updated!"); } 
+      else { await addTopic({ TopicName: newTopic }); showToast("Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getTopics, setTopics, "Topics");
+    } catch (err) { alert(err.message); }
   };
   const handleEditTopic = (t) => { setEditingId(t.topicid); setNewTopic(t.topicname); };
-  const handleDeleteTopic = async (id) => {
-    if(!window.confirm("Delete this topic?")) return;
-    try { await deleteTopic(id); showToast("🗑️ Topic Deleted"); await fetchDataSafely(getTopics, setTopics, "Topics"); }
-    catch (err) { alert("Error: " + err.message); }
-  };
+  const handleDeleteTopic = async (id) => { if(!window.confirm("Delete?")) return; try { await deleteTopic(id); showToast("Deleted"); await fetchDataSafely(getTopics, setTopics, "Topics"); } catch (err) { alert(err.message); } };
 
-  // --- KEYWORDS ---
+  // KEYWORDS
   const handleSaveKeyword = async () => {
     try {
-      if (editingId) {
-        await updateKeyword(editingId, { KeywordName: newKeyword });
-        showToast("✅ Keyword Updated!");
-      } else {
-        await addKeyword({ KeywordName: newKeyword });
-        showToast("✅ Keyword Added!");
-      }
-      resetMgmtForms();
-      await fetchDataSafely(getKeywords, setKeywords, "Keywords");
-    } catch (err) { alert("Error: " + err.message); }
+      if (editingId) { await updateKeyword(editingId, { KeywordName: newKeyword }); showToast("Updated!"); } 
+      else { await addKeyword({ KeywordName: newKeyword }); showToast("Added!"); }
+      resetMgmtForms(); await fetchDataSafely(getKeywords, setKeywords, "Keywords");
+    } catch (err) { alert(err.message); }
   };
   const handleEditKeyword = (k) => { setEditingId(k.keywordid); setNewKeyword(k.keywordname); };
-  const handleDeleteKeyword = async (id) => {
-    if(!window.confirm("Delete this keyword?")) return;
-    try { await deleteKeyword(id); showToast("🗑️ Keyword Deleted"); await fetchDataSafely(getKeywords, setKeywords, "Keywords"); }
-    catch (err) { alert("Error: " + err.message); }
-  };
+  const handleDeleteKeyword = async (id) => { if(!window.confirm("Delete?")) return; try { await deleteKeyword(id); showToast("Deleted"); await fetchDataSafely(getKeywords, setKeywords, "Keywords"); } catch (err) { alert(err.message); } };
 
 
   // ==========================================
@@ -556,7 +483,7 @@ function App() {
                    <h6 className="fw-bold text-primary mb-3">{editingId ? 'Edit Institute' : 'Add New Institute'}</h6>
                    <Row className="g-2">
                       <Col md={5}><Form.Control type="text" placeholder="Institute Name" value={newInstitute.name} onChange={(e) => setNewInstitute({...newInstitute, name: e.target.value})} /></Col>
-                      <Col md={5}><Form.Select value={newInstitute.universityId} onChange={(e) => setNewInstitute({...newInstitute, universityId: e.target.value})}><option value="">Select University...</option>{universities.map(u => <option key={u.UniversityID} value={u.UniversityID}>{u.UniversityName}</option>)}</Form.Select></Col>
+                      <Col md={5}><Form.Select value={newInstitute.universityId} onChange={(e) => setNewInstitute({...newInstitute, universityId: e.target.value})}><option value="">Select University...</option>{universities.map(u => <option key={u.universityid} value={u.universityid}>{u.universityname}</option>)}</Form.Select></Col>
                       <Col md={2}>
                         <div className="d-flex gap-1">
                            <Button variant={editingId ? "warning" : "success"} className="w-100 text-white fw-bold" onClick={handleSaveInstitute}>{editingId ? "Update" : "Add"}</Button>
@@ -583,37 +510,40 @@ function App() {
                  </div>
               </Tab>
 
-              {/* TAB 6: UNIVERSITIES */}
-              <Tab eventKey="universities" title="Universities">
-                 <div className="bg-light p-3 rounded mb-4 border">
-                   <h6 className="fw-bold text-primary mb-3">{editingId ? 'Edit University' : 'Add New University'}</h6>
-                   <Row className="g-2">
-                      <Col md={9}><Form.Control type="text" placeholder="University Name" value={newUniversity} onChange={(e) => setNewUniversity(e.target.value)} /></Col>
-                      <Col md={3}>
-                        <div className="d-flex gap-1">
-                          <Button variant={editingId ? "warning" : "success"} className="w-100 text-white fw-bold" onClick={handleSaveUniversity}>{editingId ? "Update" : "Add"}</Button>
-                          {editingId && <Button variant="secondary" onClick={resetMgmtForms}>X</Button>}
-                        </div>
-                      </Col>
-                   </Row>
-                 </div>
-                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    <Table striped hover size="sm">
-                      <thead><tr><th>Name</th><th className="text-end">Actions</th></tr></thead>
-                      <tbody>
-                        {universities.map(u => (
-                          <tr key={u.UniversityID}>
-                            <td className="align-middle">{u.UniversityName}</td>
-                            <td className="text-end">
-                              <Button variant="outline-primary" size="sm" className="me-1" onClick={() => handleEditUniversity(u)}>Edit</Button>
-                              <Button variant="outline-danger" size="sm" onClick={() => handleDeleteUniversity(u.UniversityID)}>Delete</Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                 </div>
-              </Tab>
+             {/* TAB 6: UNIVERSITIES */}
+<Tab eventKey="universities" title="Universities">
+    <div className="bg-light p-3 rounded mb-4 border">
+        <h6 className="fw-bold text-primary mb-3">{editingId ? 'Edit University' : 'Add New University'}</h6>
+        <Row className="g-2">
+            <Col md={9}><Form.Control type="text" placeholder="University Name" value={newUniversity} onChange={(e) => setNewUniversity(e.target.value)} /></Col>
+            <Col md={3}>
+                <div className="d-flex gap-1">
+                    <Button variant={editingId ? "warning" : "success"} className="w-100 text-white fw-bold" onClick={handleSaveUniversity}>{editingId ? "Update" : "Add"}</Button>
+                    {editingId && <Button variant="secondary" onClick={resetMgmtForms}>X</Button>}
+                </div>
+            </Col>
+        </Row>
+    </div>
+    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+        <Table striped hover size="sm">
+            <thead><tr><th>Name</th><th className="text-end">Actions</th></tr></thead>
+            <tbody>
+                {universities.map(u => (
+                    // DİKKAT: Veritabanından gelen sütun adları küçük harf olabilir (u.universityid)
+                    // API'den ne geldiğini console.log(universities) ile görebilirsin.
+                    // Genelde Postgres küçük harf döner.
+                    <tr key={u.universityid || u.UniversityID}> 
+                        <td className="align-middle">{u.universityname || u.UniversityName}</td>
+                        <td className="text-end">
+                            <Button variant="outline-primary" size="sm" className="me-1" onClick={() => handleEditUniversity(u)}>Edit</Button>
+                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteUniversity(u.universityid || u.UniversityID)}>Delete</Button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </Table>
+    </div>
+</Tab>
 
               {/* TAB 7: LANGUAGES */}
               <Tab eventKey="languages" title="Languages">

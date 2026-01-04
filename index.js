@@ -86,22 +86,63 @@ app.get("/api/people", async (req, res) => {
   } catch (err) { res.status(500).json(err); }
 });
 
-// --- YENİ KİŞİ EKLEME (Bu eksikti) ---
-app.post("/api/people", async (req, res) => {
+// ==========================================
+// --- UNIVERSITIES (ÜNİVERSİTELER) ---
+// ==========================================
+
+// 1. Tüm Üniversiteleri Getir
+app.get("/api/universities", async (req, res) => {
   try {
-    const { firstName, lastName, title, email } = req.body;
-    
-    const query = `
-      INSERT INTO People (FirstName, LastName, Title, Email)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *;
-    `;
-    
-    const newPerson = await pool.query(query, [firstName, lastName, title, email]);
-    res.json(newPerson.rows[0]);
+    const allUniversities = await pool.query("SELECT * FROM Universities ORDER BY UniversityID ASC");
+    res.json(allUniversities.rows);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send("Kişi eklenirken hata: " + err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// 2. Yeni Üniversite Ekle
+app.post("/api/universities", async (req, res) => {
+  try {
+    const { UniversityName } = req.body;
+    const newUniversity = await pool.query(
+      "INSERT INTO Universities (UniversityName) VALUES($1) RETURNING *",
+      [UniversityName]
+    );
+    res.json(newUniversity.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// 3. Üniversite Güncelle
+app.put("/api/universities/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { UniversityName } = req.body;
+    await pool.query(
+      "UPDATE Universities SET UniversityName = $1 WHERE UniversityID = $2",
+      [UniversityName, id]
+    );
+    res.json("University was updated!");
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// 4. Üniversite Sil
+app.delete("/api/universities/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Önce bu üniversiteye bağlı enstitü var mı kontrol edilebilir ama şimdilik direkt siliyoruz.
+    // Eğer Foreign Key hatası alırsan önce bağlı enstitüleri silmelisin.
+    await pool.query("DELETE FROM Universities WHERE UniversityID = $1", [id]);
+    res.json("University was deleted!");
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 });
 
@@ -129,66 +170,58 @@ app.get("/api/types", async (req, res) => {
   } catch (err) { res.status(500).json(err); }
 });
 
-// --- GELİŞTİRİLMİŞ DETAYLI ARAMA ---
+// --- DETAYLI ARAMA ENDPOINT'İ (Filtreleme) ---
 app.get("/api/search", async (req, res) => {
   try {
+    // URL'den gelen filtreleri al (Örn: ?title=sql&year=2024)
     const { title, authorId, typeId, instituteId, year } = req.query;
 
-    console.log("Gelen Arama İsteği:", req.query); // Terminalde ne geldiğini gör!
-
+    // Temel sorgumuz (Her zaman doğru olan 1=1 taktiği ile başlarız)
     let sqlQuery = `SELECT * FROM Theses WHERE 1=1`;
     const values = [];
-    let paramCounter = 1;
+    let paramCounter = 1; // $1, $2 sırasını takip etmek için
 
-    // 1. AKILLI METİN ARAMA (Hem Başlık Hem Özet)
-    // Kullanıcı "title" kutusuna yazsa bile biz özete de bakalım.
-    if (title && title.trim() !== "") {
-      sqlQuery += ` AND (Title ILIKE $${paramCounter} OR Abstract ILIKE $${paramCounter})`;
-      values.push(`%${title}%`);
+    // 1. Başlık Arıyor mu? (ILIKE ile büyük/küçük harf duyarsız arama)
+    if (title) {
+      sqlQuery += ` AND Title ILIKE $${paramCounter}`;
+      values.push(`%${title}%`); // İçinde geçen kelimeyi bulur
       paramCounter++;
     }
 
-    // 2. YAZAR FİLTRESİ (Boş değilse ve sayıysa ekle)
-    if (authorId && authorId !== "" && !isNaN(authorId)) {
+    // 2. Yazar Seçmiş mi?
+    if (authorId) {
       sqlQuery += ` AND AuthorID = $${paramCounter}`;
-      values.push(parseInt(authorId));
+      values.push(authorId);
       paramCounter++;
     }
 
-    // 3. TÜR FİLTRESİ
-    if (typeId && typeId !== "" && !isNaN(typeId)) {
+    // 3. Tür Seçmiş mi?
+    if (typeId) {
       sqlQuery += ` AND TypeID = $${paramCounter}`;
-      values.push(parseInt(typeId));
+      values.push(typeId);
       paramCounter++;
     }
 
-    // 4. ENSTİTÜ FİLTRESİ
-    if (instituteId && instituteId !== "" && !isNaN(instituteId)) {
+    // 4. Enstitü Seçmiş mi?
+    if (instituteId) {
       sqlQuery += ` AND InstituteID = $${paramCounter}`;
-      values.push(parseInt(instituteId));
+      values.push(instituteId);
       paramCounter++;
     }
 
-    // 5. YIL FİLTRESİ
-    if (year && year.trim() !== "") {
+    // 5. Yıl Girmiş mi?
+    if (year) {
       sqlQuery += ` AND Year = $${paramCounter}`;
-      values.push(parseInt(year));
+      values.push(year);
       paramCounter++;
     }
 
-    console.log("Çalışan SQL:", sqlQuery); // Hangi sorguyu attığını gör
-    console.log("Değerler:", values);
-
+    // Sorguyu çalıştır
     const result = await pool.query(sqlQuery, values);
-    
-    if (result.rows.length === 0) {
-        console.log("Sonuç bulunamadı!");
-    }
-
     res.json(result.rows);
 
   } catch (err) {
-    console.error("Arama Hatası:", err.message);
-    res.status(500).send("Arama sırasında sunucu hatası: " + err.message);
+    console.error(err.message);
+    res.status(500).send("Arama hatası");
   }
 });
