@@ -1,30 +1,14 @@
 import axios from 'axios';
 
-// Render'daki Backend adresin
 const BASE_URL = "https://db-final-kh6u.onrender.com";
-
-// HATA ÇÖZÜMÜ: API_URL değişkenini burada tanımlıyoruz.
-// Backend rotaların '/api' ile başladığı için sonuna ekliyoruz.
 const API_URL = `${BASE_URL}/api`;
 
-export const api = axios.create({
-    baseURL: BASE_URL,
-});
+export const api = axios.create({ baseURL: BASE_URL });
 
-// ==========================================
-// 1. TEMEL TEZ İŞLEMLERİ
-// ==========================================
-
-// GET (Tüm Tezleri Çek)
 export const getTheses = () => api.get('/api/theses');
-
-// POST (Tez Ekle)
 export const addThesis = (data) => api.post('/api/theses', data);
-
-// DELETE (Tez Sil)
 export const deleteThesis = (id) => api.delete(`/api/theses/${id}`);
 
-// ARAMA FONKSİYONU
 export const searchTheses = (filters) => {
     const cleanParams = {};
     for (const key in filters) {
@@ -32,67 +16,38 @@ export const searchTheses = (filters) => {
             cleanParams[key] = filters[key];
         }
     }
-    console.log("Backend'e giden parametreler:", cleanParams);
     return api.get('/api/search', { params: cleanParams });
 };
-
-// ==========================================
-// 2. KİŞİLER (PEOPLE) - YAZARLAR/DANIŞMANLAR
-// ==========================================
 
 export const getPeople = () => axios.get(`${API_URL}/people`);
 export const addPerson = (data) => axios.post(`${API_URL}/people`, data);
 export const updatePerson = (id, data) => axios.put(`${API_URL}/people/${id}`, data);
 export const deletePerson = (id) => axios.delete(`${API_URL}/people/${id}`);
 
-// ==========================================
-// 3. ENSTİTÜLER (INSTITUTES)
-// ==========================================
-
 export const getInstitutes = () => axios.get(`${API_URL}/institutes`);
 export const addInstitute = (data) => axios.post(`${API_URL}/institutes`, data);
 export const updateInstitute = (id, data) => axios.put(`${API_URL}/institutes/${id}`, data);
 export const deleteInstitute = (id) => axios.delete(`${API_URL}/institutes/${id}`);
-
-// ==========================================
-// 4. ÜNİVERSİTELER (UNIVERSITIES)
-// ==========================================
 
 export const getUniversities = () => axios.get(`${API_URL}/universities`);
 export const addUniversity = (data) => axios.post(`${API_URL}/universities`, data);
 export const updateUniversity = (id, data) => axios.put(`${API_URL}/universities/${id}`, data);
 export const deleteUniversity = (id) => axios.delete(`${API_URL}/universities/${id}`);
 
-// ==========================================
-// 5. DİLLER (LANGUAGES)
-// ==========================================
-
 export const getLanguages = () => axios.get(`${API_URL}/languages`);
 export const addLanguage = (data) => axios.post(`${API_URL}/languages`, data);
 export const updateLanguage = (id, data) => axios.put(`${API_URL}/languages/${id}`, data);
 export const deleteLanguage = (id) => axios.delete(`${API_URL}/languages/${id}`);
-
-// ==========================================
-// 6. TEZ TÜRLERİ (THESIS TYPES)
-// ==========================================
 
 export const getTypes = () => axios.get(`${API_URL}/types`);
 export const addType = (data) => axios.post(`${API_URL}/types`, data);
 export const updateType = (id, data) => axios.put(`${API_URL}/types/${id}`, data);
 export const deleteType = (id) => axios.delete(`${API_URL}/types/${id}`);
 
-// ==========================================
-// 7. KONULAR (TOPICS)
-// ==========================================
-
 export const getTopics = () => axios.get(`${API_URL}/topics`);
 export const addTopic = (data) => axios.post(`${API_URL}/topics`, data);
 export const updateTopic = (id, data) => axios.put(`${API_URL}/topics/${id}`, data);
 export const deleteTopic = (id) => axios.delete(`${API_URL}/topics/${id}`);
-
-// ==========================================
-// 8. ANAHTAR KELİMELER (KEYWORDS)
-// ==========================================
 
 export const getKeywords = () => axios.get(`${API_URL}/keywords`);
 export const addKeyword = (data) => axios.post(`${API_URL}/keywords`, data);
